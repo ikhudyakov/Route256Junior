@@ -4,9 +4,26 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
-	"time"
 )
+
+type Interval []struct {
+	start, end int
+}
+
+func (i Interval) Len() int {
+	return len(i)
+}
+
+func (i Interval) Less(k, j int) bool {
+	return i[k].start < i[j].start
+}
+
+func (i Interval) Swap(k, j int) {
+	i[k], i[j] = i[j], i[k]
+}
 
 func main() {
 	in := bufio.NewReader(os.Stdin)
@@ -20,51 +37,41 @@ func main() {
 		var timeCount int
 		var check = "YES"
 		fmt.Fscan(in, &timeCount)
-		var intervals = make([]struct {
-			start, end time.Time
-		}, timeCount)
+		var intervals = make(Interval, timeCount)
 		for j := 0; j < timeCount; j++ {
 			var line string
 			fmt.Fscan(in, &line)
 			s := strings.Split(line, "-")
-			start, _ := time.Parse("15:04:05", s[0])
-			end, _ := time.Parse("15:04:05", s[1])
+			start := validate(s[0])
+			end := validate(s[1])
 
 			intervals[j].start = start
 			intervals[j].end = end
 
-			if start.IsZero() || end.IsZero() {
-				check = "NO"
-			}
-
-			if start.After(end) {
+			if start < 0 || end < 0 || start > end {
 				check = "NO"
 			}
 		}
 
-		for j := 0; j < len(intervals); j++ {
-			if check == "NO" {
+		sort.Sort(intervals)
+		for i := 0; i < intervals.Len()-1; i++ {
+			if intervals[i].end >= intervals[i+1].start {
+				check = "NO"
 				break
 			}
-			for k := 0; k < len(intervals); k++ {
-
-				if j == k {
-					continue
-				}
-
-				if ((intervals[j].start.Before(intervals[k].end) || intervals[j].start.Equal(intervals[k].end)) &&
-					(intervals[j].start.After(intervals[k].start) || intervals[j].start.Equal(intervals[k].start))) ||
-					((intervals[j].end.Before(intervals[k].end) || intervals[j].end.Equal(intervals[k].end)) &&
-						(intervals[j].end.After(intervals[k].start) || intervals[j].end.Equal(intervals[k].start))) {
-					check = "NO"
-					break
-				}
-			}
-			if check == "NO" {
-				break
-			}
-
 		}
+
 		fmt.Fprintln(out, check)
 	}
+}
+
+func validate(line string) int {
+	arr := strings.Split(line, ":")
+	h, _ := strconv.Atoi(arr[0])
+	m, _ := strconv.Atoi(arr[1])
+	s, _ := strconv.Atoi(arr[2])
+	if h < 0 || h > 23 || m < 0 || m > 59 || s < 0 || s > 59 {
+		return -1
+	}
+	return s + m*60 + h*3600
 }
