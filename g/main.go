@@ -4,80 +4,85 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 )
-
-type User struct {
-	id                int
-	friendsId         []int
-	possibleFriendsId []int
-}
 
 func main() {
 	in := bufio.NewReader(os.Stdin)
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
-
 	var userCount, pairCount int
 	fmt.Fscan(in, &userCount, &pairCount)
 
-	users := make([]User, userCount)
-	for i := 0; i < userCount; i++ {
-		user := User{
-			id:                i + 1,
-			friendsId:         make([]int, 0),
-			possibleFriendsId: make([]int, 0),
-		}
-		users[i] = user
-	}
+	users := make(map[int]map[int]bool)
 
 	for i := 0; i < pairCount; i++ {
-		var user, friend int
+		var user int
+		var friend int
 		fmt.Fscan(in, &user, &friend)
-		users[user-1].friendsId = append(users[user-1].friendsId, friend)
-		users[friend-1].friendsId = append(users[friend-1].friendsId, user)
-	}
 
-	for _, u := range users {
-		u.possibleFriendsId = findCommonFriends(u.id, users)
-		fmt.Fprintln(out, u.possibleFriendsId)
-	}
-}
-
-func findCommonFriends(user int, users []User) []int {
-	var commonFriends []int
-	for _, u := range users {
-		if u.id == user || isFriend(user, u.id, users) {
-			continue
+		_, ok := users[user]
+		if !ok {
+			users[user] = make(map[int]bool)
+			users[user][friend] = false
+		} else {
+			users[user][friend] = false
 		}
-		for _, f := range u.friendsId {
-			if isFriend(user, f, users) {
-				commonFriends = append(commonFriends, u.id)
-				break
+
+		_, ok = users[friend]
+		if !ok {
+			users[friend] = make(map[int]bool)
+			users[friend][user] = false
+		} else {
+			users[friend][user] = false
+		}
+	}
+
+	for i := 1; i < userCount+2; i++ {
+		var tempArr []int
+		tempMap := make(map[int]int)
+		for k, _ := range users[i] {
+			for m, _ := range users[k] {
+				if m == i {
+					continue
+				}
+				_, ok := users[i][m]
+				if ok {
+					continue
+				}
+				_, ok = users[i][k]
+				if !ok {
+					continue
+				} else {
+					tempMap[m]++
+				}
 			}
 		}
-	}
-	commonFriends = removeDuplicates(commonFriends)
-	return commonFriends
-}
 
-func isFriend(u1, u2 int, users []User) bool {
-	for _, f := range users[u1-1].friendsId {
-		if f == u2 {
-			return true
+		maxFriends := 0
+		for _, val := range tempMap {
+			if val > maxFriends {
+				maxFriends = val
+			}
+		}
+
+		for key, val := range tempMap {
+			if val == maxFriends {
+				tempArr = append(tempArr, key)
+			}
+		}
+
+		sort.Ints(tempArr)
+		if i == userCount+1 {
+			break
+		}
+
+		if len(tempArr) == 0 {
+			fmt.Fprintln(out, "0")
+			continue
+		} else {
+			fmt.Fprintln(out, strings.Trim(fmt.Sprint(tempArr), "[]"))
 		}
 	}
-	return false
-}
-
-func removeDuplicates(s []int) []int {
-	seen := make(map[int]bool)
-	j := 0
-	for i, x := range s {
-		if _, ok := seen[x]; !ok {
-			seen[x] = true
-			s[j] = s[i]
-			j++
-		}
-	}
-	return s[:j]
 }
